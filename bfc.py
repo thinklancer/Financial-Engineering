@@ -10,11 +10,11 @@ import numpy as np
 from operator import mul
 from math import *
 from scipy.misc import comb
+from IPython import embed
 
 def calcPV(p,n,r):
-    '''
-   calcPV(p,n,r)
-   Args:
+    ''' calcPV(p,n,r)
+    Args:
       p (float) : future value
       n (int) : number of periods
       r (float) : interest for each periods
@@ -129,7 +129,7 @@ class Binomial:
         ''' return the American put option price
         '''
         for i in range(self.n,0,-1):
-            #print "time step {0}/{1}".format(i,self.n)
+            print "time step {0}/{1}".format(i,self.n)
             if i==self.n:
                 Cf = self.strike-self.setStockPrice(i)
                 Cf = np.maximum(Cf,np.zeros_like(Cf))
@@ -137,12 +137,9 @@ class Binomial:
                 Cf = self.strike-self.setStockPrice(i)
                 Cft = np.maximum(Cf,np.zeros_like(Cf))
                 Cf = np.maximum(Cft,pCf)
-                '''
-                if not (Cf == Cft).all():
-                    print "Optimal exercise early at {0}".format(i)
+                if not (pCf == Cf).all():
                     print Cft
-                    print Cf
-                '''
+                    print np.array(pCf)
             pCf = [onePeriodPrice(Cf[j],Cf[j+1],self.q,(self.R-1)) \
                        for j in range(0,i)]
         return max(self.strike-self.price,pCf[0])
