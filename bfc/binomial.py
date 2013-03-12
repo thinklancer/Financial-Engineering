@@ -1,55 +1,12 @@
 '''
-.. module:: bfc
+Option pricing
+---------------------
 
-   Basic Financial Calculation
-   --  Present/Future Value --
-   --  Option pricing --
 '''
-
-import numpy as np
-from operator import mul
-from math import *
-from scipy.misc import comb
-from IPython import embed
-
-def calcPV(p,n,r):
-    ''' calcPV(p,n,r)
-    Args:
-      p (float) : future value
-      n (int) : number of periods
-      r (float) : interest for each periods
-   Returns:
-      float.  The present value of the cash flow
-    '''
-    return p*(1-(r+1)**(-n))/(1-1/(1+r))
-
-# calcualte the future value
-# input: present value, number of periods, interest for each periods
-def calcFV(p,n,r):
-    return p*((r+1)**n-1)/r
-
-# calculate the discount rate
-# input: interest rate and number of periods
-def calcDis(r,t):
-    return 1/(r+1)**t
-
-def calcPerm(n,m):
-    ''' return permunation number of m within n
-    '''
-    if m==0 or m==n:
-        return 1
-    t = max(m,n-m)
-    return reduce(mul, [i for i in range(n,t,-1)])
-
-def onePeriodPrice(Cu,Cd,q,r):
-    ''' return the one period option price
-    '''
-    if q <= 0 or q>=1:
-        print "!! q value is wrong !!"
-    return (q*Cu+(1-q)*Cd)/(1+r)
-    
-#   option pricing    #
 class Binomial:
+    '''
+    Binomial model for option pricing
+    '''
     def __init__(self): # create default model
         self.setup(100,3,1.07,0.01,100.,'european','call',0)
 
@@ -165,11 +122,3 @@ class Binomial:
         self.type=[ae,cp]
         self.checkArbitrage()
         self.setRNP()
-        
-class BlackScholes:
-    def __int__(self):
-        self.S0 = 100
-        self.mu = 0 # irrelevent
-        self.sigma = 0.3
-        self.c = 0.
-        

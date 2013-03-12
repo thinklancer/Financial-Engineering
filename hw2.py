@@ -1,4 +1,7 @@
-# homework 2
+'''
+homework 2
+==========
+'''
 from bfc import *
 
 def calcAmericanCall(sel):

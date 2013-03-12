@@ -1,5 +1,7 @@
-# for homework 1
-
+'''
+homework 1
+==========
+'''
 def calcPV(p,n,r):
     return p*(1-r**(-n))/(1-1/r)
 
