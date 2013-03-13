@@ -24,6 +24,17 @@ class Binomial:
         print "####################################"
         
     def setup(self,p,n,u,r,s,ae,cp,c):
+        ''' set up the basic information for binomial model
+
+        :param p: current price
+        :param n: number of period
+        :param u: price for up / current price
+        :param r: cash interest rate
+        :param s: strike price
+        :param ae: option type "american" / "european"
+        :param cp: option type "call" / "put"
+        :param c: coupon rate
+        '''
         self.u=u
         self.d=1./u
         self.price=p
@@ -37,8 +48,12 @@ class Binomial:
         
         
     def calcOptionPrice(self):
+        ''' driver to calculate the option price
+        '''
         self.display()
-        if self.type[1] == 'call':
+        if self.type[1] == 'call' and self.type[0]=='european':
+            return self.calcCall()
+        if self.type[1] == 'call' and self.type[0]=='american':
             return self.calcCall()
         if self.type[1] == 'put' and self.type[0]=='american':
             return self.calcAmericanPut()
@@ -46,6 +61,8 @@ class Binomial:
             return self.calcEuropeanPut()
 
     def checkArbitrage(self):
+        ''' check up price and interest rate prevent arbitrage oppotunity
+        '''
         if self.u < 1.:
             print "!! no price up is wrong!!",self.u
         if self.u < self.R:
@@ -54,13 +71,14 @@ class Binomial:
             print "!! arbitrage by borrow cash to buy !!",self.d,self.R
 
     def setRNP(self):
-        ''' return risk neutra probabilities
+        ''' return risk neutral probabilities
         '''
         self.checkArbitrage()
         self.q = (self.R-self.d-self.c)/(self.u-self.d)
     
     def setStockPrice(self,t):
         ''' return stock price at time t
+        :param t: time step t
         '''
         return np.array([(self.u)**i*(self.d)**(t-i)\
                          for i in range(t,-1,-1)])*self.price
