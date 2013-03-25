@@ -140,3 +140,75 @@ class Binomial:
         self.type=[ae,cp]
         self.checkArbitrage()
         self.setRNP()
+'''    os.system("dot -Tps "+filename+".dot -o temp.ps")
+    os.system("ps2pdf temp.ps")
+    os.system("mv temp.pdf "+filename+".pdf")
+'''
+
+
+'''
+===========================
+'''
+
+import bfc.BinomialTree as BT
+
+def setShortRateLattice(r0,u,d,n):
+    bt = BT.BinomialTree(n+1)
+    for i in range(n+1):
+        for j in range(i+1):
+            bt.setNode(i,j,r0*u**(i-j)*d**j)
+    return bt
+
+def setZCB(srl,p=100,qu=0.5):
+    ''' calculate the t=0 price of Zero-Coupon-Bond
+
+    :param srl: short rate lattice
+    :param p: strike price
+    :param qu: up move probability
+    '''
+    n = srl.n
+    qd = 1-qu
+    bt = BT.BinomialTree(n)
+    # last time step
+    for i in range(n):
+        bt.setNode(n-1,i,100)
+    for i in range(n-2,-1,-1):
+        for j in range(i+1):
+            bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j)))
+    return bt
+
+def callZCB(strike,expire,zcb,srl,qu=0.5,outputfile=''):
+    ''' calculate the Call option on the Zero Coupon Bond
+
+    :param strike: strike price
+    :param expire: time for expiration
+    :param zcb: underline zero coupon bond
+    :param srl: underline short rate lattice
+    '''
+    n = expire+1
+    qd = 1-qu
+    bt = BT.BinomialTree(n)
+    # last time step
+    for i in range(n):
+        bt.setNode(expire,i,max(0,zcb.getNode(expire,i)-strike))
+    for i in range(n-2,-1,-1):
+        for j in range(i+1):
+            bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j)))
+    if outputfile:
+        with open(outputfile,'w') as f:
+            bt.showData(f,form='{0:.2f}')
+    return bt.getNode(0,0)
+
+
+if __name__=="__main__":
+    import os
+    a = setShortRateLattice(0.06,1.25,0.9,4)
+    b = setZCB(a)
+    callZCB(84,2,b,a,outputfile='test.dot')
+    
+    #with open('test.dot','w') as f:
+        #a.showData(f,form='{0:.2f}%',coef=100)
+        #b.showData(f,form='{0:.2f}')
+    os.system("dot -Tps test.dot -o test.ps")
+    os.system("ps2pdf test.ps")
+    os.system("mv test.pdf test.pdf")
