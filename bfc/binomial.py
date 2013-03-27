@@ -153,32 +153,96 @@ class Binomial:
 import bfc.BinomialTree as BT
 
 def setShortRateLattice(r0,u,d,n):
+    ''' set short rate lattice
+
+    :param r0: interest rate at time 0
+    :param u: up move of interest rate
+    :param d: down move of interest rate
+    :param n: total period n
+    '''
     bt = BT.BinomialTree(n+1)
     for i in range(n+1):
         for j in range(i+1):
             bt.setNode(i,j,r0*u**(i-j)*d**j)
     return bt
 
-def setZCB(srl,p=100,qu=0.5):
-    ''' calculate the t=0 price of Zero-Coupon-Bond
+def setZCB(srl,p=100,qu=0.5,n=-1):
+    ''' calculate the price structure of Zero-Coupon-Bond
 
     :param srl: short rate lattice
     :param p: strike price
     :param qu: up move probability
+    :param n: expiration time
+    :returns : the zero coupon bond lattice
     '''
-    n = srl.n
+    if n == -1:
+        n = srl.n
+    elif n >= srl.n:
+        print "! wrong expiration time n!"
+        exit()
+    else:
+        n=n+1
     qd = 1-qu
     bt = BT.BinomialTree(n)
     # last time step
     for i in range(n):
-        bt.setNode(n-1,i,100)
+        bt.setNode(n-1,i,p)
     for i in range(n-2,-1,-1):
         for j in range(i+1):
             bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j)))
     return bt
 
-def callZCB(strike,expire,zcb,srl,qu=0.5,outputfile=''):
-    ''' calculate the Call option on the Zero Coupon Bond
+def setCouponBond(srl,p=100,c=0.1,qu=0.5,n=-1):
+    ''' calculate the price structure of Coupon-Bearing Bond
+
+    :param srl: short rate lattice
+    :param p: strike price
+    :param c: coupon rate
+    :param qu: up move probability
+    :param n: expiration time
+    :returns : the coupon-bearing bond lattice
+    '''
+    if n == -1:
+        n = srl.n
+    elif n > srl.n:
+        print "! wrong expiration time n!"
+        exit()
+    else:
+        n=n+1
+    qd = 1-qu
+    bt = BT.BinomialTree(n)
+    # last time step
+    for i in range(n):
+        bt.setNode(n-1,i,p+p*c)
+    for i in range(n-2,-1,-1):
+        for j in range(i+1):
+            bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j))+p*c)
+    bt.setNode(0,0,bt.getNode(0,0)-p*c) # correct last step - no coupon at time 0
+    return bt
+    
+def calcR(srl,n,qu=0.5):
+    ''' calculate the cash account price for 1 dollar at time n
+
+    :param srl: short rate lattice
+    :param n: time n
+    :returns: E[1/Bn]
+    '''
+    n=n+1
+    if n > srl.n:
+        print "! wrong expiration time n!"
+        exit()
+    qd = 1-qu
+    bt = BT.BinomialTree(n)
+    # last time step
+    for i in range(n):
+        bt.setNode(n-1,i,1.)
+    for i in range(n-2,-1,-1):
+        for j in range(i+1):
+            bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j)))
+    return bt.getNode(0,0)
+
+def callBond(strike,expire,bond,srl,qu=0.5,outputfile=''):
+    ''' calculate the Call option on the Binomial Bond
 
     :param strike: strike price
     :param expire: time for expiration
@@ -186,11 +250,14 @@ def callZCB(strike,expire,zcb,srl,qu=0.5,outputfile=''):
     :param srl: underline short rate lattice
     '''
     n = expire+1
+    if n > srl.n or n > bond.n:
+        print "! wrong expiration time n!"
+        exit()
     qd = 1-qu
     bt = BT.BinomialTree(n)
     # last time step
     for i in range(n):
-        bt.setNode(expire,i,max(0,zcb.getNode(expire,i)-strike))
+        bt.setNode(expire,i,max(0,bond.getNode(expire,i)-strike))
     for i in range(n-2,-1,-1):
         for j in range(i+1):
             bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j)))
@@ -199,16 +266,148 @@ def callZCB(strike,expire,zcb,srl,qu=0.5,outputfile=''):
             bt.showData(f,form='{0:.2f}')
     return bt.getNode(0,0)
 
+def forwardBond(bond,expire,srl,qu=0.5,c=0.):
+    ''' calculate the price of forward on Bond
 
+    :param bond: underline bond
+    :param expire: forward mature time
+    :param srl: short rate lattice
+    :param qu: up move probability
+    :param c: coupon rate
+    '''
+    n = expire+1
+    if n > srl.n or n > bond.n:
+        print "! wrong expiration time n!"
+        exit()
+    coupon = bond.getNode(bond.n-1,1) / (1+c) *c # calculate the coupon
+    qd = 1-qu
+    bt = BT.BinomialTree(n)
+    # last time step
+    for i in range(n):
+        bt.setNode(expire,i,bond.getNode(expire,i)-coupon) # remove the coupon at expiration date
+    for i in range(n-2,-1,-1):
+        for j in range(i+1):
+            bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j)))
+    return bt.getNode(0,0)/calcR(srl,expire)
+
+
+def futureBond(bond,expire,srl,qu=0.5,c=0.):
+    ''' calculate the price of forward on Bond
+
+    :param bond: underline bond
+    :param expire: forward mature time
+    :param srl: short rate lattice
+    :param qu: up move probability
+    :param c: coupon rate
+    '''
+    n = expire+1
+    if n > srl.n or n > bond.n:
+        print "! wrong expiration time n!"
+        exit()
+    coupon = bond.getNode(bond.n-1,1) / (1+c) *c # calculate the coupon
+    qd = 1-qu
+    bt = BT.BinomialTree(n)
+    # last time step
+    for i in range(n):
+        bt.setNode(expire,i,bond.getNode(expire,i)-coupon) # remove the coupon at expiration date
+    for i in range(n-2,-1,-1):
+        for j in range(i+1):
+            bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j)))
+    return bt.getNode(0,0)
+
+def bondlet(expire,srl,strike,qu=0.5,type='cap'):
+    ''' calculate the price of caplet/floorlet
+
+    :param expire: expire time (arrear settle)
+    :param srl: short rate lattice
+    :param strike: strike rate
+    :param qu: up move probability
+    :param type: cap/floor
+    :returns: caplet price
+    '''
+    if type == 'cap':
+        coef=1
+    else: # 'floor'
+        coef=-1
+    if expire > srl.n:
+        print "! wrong expiration time n!"
+        exit()
+    n = expire
+    qd = 1-qu
+    bt = BT.BinomialTree(n)
+    # last time step
+    for i in range(n):
+        bt.setNode(n-1,i,max(coef*(srl.getNode(n-1,i)-strike),0)/(1+srl.getNode(n-1,i)))
+    for i in range(n-2,-1,-1):
+        for j in range(i+1):
+            bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j)))
+    return bt.getNode(0,0)
+    
+def swap(expire,srl,fr,qu=0.5):
+    ''' calculate the price of Swaps
+
+    :param expire: expire time (arrear settle)
+    :param srl: short rate lattice
+    :param fr: fix rate
+    :param qu: up move probability
+    :returns: swaps lattice
+    '''
+    if expire > srl.n:
+        print "! wrong expiration time n!"
+        exit()
+    n = expire
+    qd = 1-qu
+    bt = BT.BinomialTree(n)
+    # last time step
+    for i in range(n):
+        bt.setNode(n-1,i,((srl.getNode(n-1,i)-fr)/(1+srl.getNode(n-1,i))))
+    for i in range(n-2,-1,-1):
+        for j in range(i+1):
+            bt.setNode(i,j,((srl.getNode(i,j)-fr+qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j))))
+    return bt
+
+def swaption(swap,srl,strike,expire,qu=0.5):
+    ''' calculate the price of Swaption
+
+    :param swap: underline swap
+    :param srl: short rate lattice
+    :param strike: strike rate
+    :param expire: expire time
+    :param qu: up move probability
+    :returns: swapion price at time 0
+    '''    
+    n = expire+1
+    if n>swap.n or n>srl.n:
+        print "! wrong expiration time n!"
+        exit()
+    qd = 1-qu
+    bt = BT.BinomialTree(n)
+    # last time step
+    for i in range(n):
+        bt.setNode(n-1,i,max(swap.getNode(n-1,i)-strike,0))
+    for i in range(n-2,-1,-1):
+        for j in range(i+1):
+            bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j)))
+    return bt.getNode(0,0)
+
+    
 if __name__=="__main__":
     import os
-    a = setShortRateLattice(0.06,1.25,0.9,4)
-    b = setZCB(a)
-    callZCB(84,2,b,a,outputfile='test.dot')
+    a = setShortRateLattice(0.06,1.25,0.9,6)
+    
+    #b = setCouponBond(a,c=0.1)
+    #print forwardBond(b,4,a,c=0.1)
+    #print futureBond(b,4,a,c=0.1)
+    #print bondlet(6,a,0.02,type='floor')
+    c = swap(6,a,0.05)
+    print swaption(c,a,0.,3)
+    #callZCB(84,2,b,a,outputfile='test.dot')
     
     #with open('test.dot','w') as f:
-        #a.showData(f,form='{0:.2f}%',coef=100)
+    #a.showData(f,form='{0:.2f}%',coef=100)
         #b.showData(f,form='{0:.2f}')
+    '''
     os.system("dot -Tps test.dot -o test.ps")
     os.system("ps2pdf test.ps")
     os.system("mv test.pdf test.pdf")
+    '''
