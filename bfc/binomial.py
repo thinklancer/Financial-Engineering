@@ -343,7 +343,7 @@ def bondlet(expire,srl,strike,qu=0.5,type='cap'):
             bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j)))
     return bt.getNode(0,0)
     
-def swap(expire,srl,fr,qu=0.5):
+def swap(expire,srl,fr,qu=0.5,pay='fix',start=0):
     ''' calculate the price of Swaps
 
     :param expire: expire time (arrear settle)
@@ -352,18 +352,26 @@ def swap(expire,srl,fr,qu=0.5):
     :param qu: up move probability
     :returns: swaps lattice
     '''
-    if expire > srl.n:
+    if expire >= srl.n:
         print "! wrong expiration time n!"
         exit()
-    n = expire
+    if pay == 'fix':
+        coef = 1
+    else:
+        coef = -1 # pay float receive fix
+    n = expire+1
     qd = 1-qu
     bt = BT.BinomialTree(n)
-    # last time step
+    # set initial payment
     for i in range(n):
-        bt.setNode(n-1,i,((srl.getNode(n-1,i)-fr)/(1+srl.getNode(n-1,i))))
-    for i in range(n-2,-1,-1):
+        bt.setNode(n-1,i,(coef*(srl.getNode(n-1,i)-fr)/(1+srl.getNode(n-1,i))))
+    # construct backwards
+    for i in range(n-2,start-1,-1):
         for j in range(i+1):
-            bt.setNode(i,j,((srl.getNode(i,j)-fr+qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j))))
+            bt.setNode(i,j,((coef*(srl.getNode(i,j)-fr)+qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j))))
+    for i in range(start-1,-1,-1):
+        for j in range(i+1):
+            bt.setNode(i,j,((qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j))))
     return bt
 
 def swaption(swap,srl,strike,expire,qu=0.5):
@@ -390,7 +398,26 @@ def swaption(swap,srl,strike,expire,qu=0.5):
             bt.setNode(i,j,(qu*bt.getNode(i+1,j+1)+qd*bt.getNode(i+1,j))/(1+srl.getNode(i,j)))
     return bt.getNode(0,0)
 
-    
+
+def elementarySecurity(srl,qu=0.5):
+    ''' build elementary security lattice
+
+    :param srl: short rate lattice
+    :returns: state price lattice
+    '''
+    n = srl.n
+    bt = BT.BinomialTree(n)
+    qd = 1-qu
+    bt.setNode(0,0,1)
+    for i in range(1,n):
+        # j=0 case
+        bt.setNode(i,0,bt.getNode(i-1,0)/2./(1+srl.getNode(i-1,0)))
+        for j in range(1,i):
+            bt.setNode(i,j,0.5*(bt.getNode(i-1,j-1)/(1+srl.getNode(i-1,j-1))+bt.getNode(i-1,j)/(1+srl.getNode(i-1,j))))
+        # j=i case
+        bt.setNode(i,i,0.5*(bt.getNode(i-1,i-1)/(1+srl.getNode(i-1,i-1))))
+    return bt
+     
 if __name__=="__main__":
     import os
     a = setShortRateLattice(0.06,1.25,0.9,6)
@@ -399,10 +426,16 @@ if __name__=="__main__":
     #print forwardBond(b,4,a,c=0.1)
     #print futureBond(b,4,a,c=0.1)
     #print bondlet(6,a,0.02,type='floor')
-    c = swap(6,a,0.05)
-    print swaption(c,a,0.,3)
+    c = swap(5,a,0.05)
+    print c.getNode(0,0)
+    #print swaption(c,a,0.,3)
     #callZCB(84,2,b,a,outputfile='test.dot')
-    
+    d=elementarySecurity(a)
+    price = 0
+    for i in range(2,4):
+        s = [(0.07-a.getNode(i-1,j))/(1+a.getNode(i-1,j))*d.getNode(i-1,j) for j in range(i)]
+        price += sum(s)
+    print price*1000000
     #with open('test.dot','w') as f:
     #a.showData(f,form='{0:.2f}%',coef=100)
         #b.showData(f,form='{0:.2f}')

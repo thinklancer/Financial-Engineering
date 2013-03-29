@@ -15,7 +15,7 @@ class BinomialTree:
         :returns: bt binao
         '''
         self.n = n
-        self.bt = np.empty(n*(n+1)/2)
+        self.bt = np.zeros(n*(n+1)/2)
 
     def getNode(self,i,j):
         '''
