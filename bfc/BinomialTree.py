@@ -42,7 +42,7 @@ class BinomialTree:
         :param form: set format of output
         :param coef: set the scale factor for output
         '''
-        pfile.write("digraph tree{\n")
+        pfile.write('digraph tree{\n   size="10,10";\n ratio=compress;')
         pfile.write("    rankdir=LR; rotate=90\n")
         for i in range(self.n):
             for j in range(i+1):
