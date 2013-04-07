@@ -63,3 +63,17 @@ def onePeriodPrice(Cu,Cd,q,r):
     return (q*Cu+(1-q)*Cd)/(1+r)
 
         
+
+class cashflow:
+    ''' Cash Flow Class
+    '''
+    def __init__(self,n,r):
+        ''' initialize a n-period cash flow with fixed interest rate r for each period
+        '''
+        self.cf = np.zeros(n)
+        self.r = r
+        
+    def pv(self):
+        ''' return the present value of a cash flow
+        '''
+        return np.sum([calcPV(c,i,self.r) for i,c in enumerate(self.cf)])

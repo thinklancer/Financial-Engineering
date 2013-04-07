@@ -4,7 +4,7 @@ Binomial Tree structure
 '''
 import numpy as np
 
-class BinomialTree:
+class BinomialTree(object):
     ''' Binomial Tree Structure
     '''
     def __init__(self,n):
@@ -12,7 +12,7 @@ class BinomialTree:
         initialize the binomial tree
         
         :param n: number of levels ( equals time step+1)
-        :returns: bt binao
+        :returns: bt binomial tree
         '''
         self.n = n
         self.bt = np.zeros(n*(n+1)/2)
@@ -66,3 +66,4 @@ class BinomialTree:
             line = '    {rank=same; '+levelline+'}\n'
             pfile.write(line)
         pfile.write('}')
+

@@ -3,9 +3,11 @@ Option pricing
 ---------------------
 
 '''
+
 class Binomial:
     '''
     Binomial model for option pricing
+
     '''
     def __init__(self): # create default model
         self.setup(100,3,1.07,0.01,100.,'european','call',0)
@@ -159,6 +161,7 @@ def setShortRateLattice(r0,u,d,n):
     :param u: up move of interest rate
     :param d: down move of interest rate
     :param n: total period n
+    
     '''
     bt = BT.BinomialTree(n+1)
     for i in range(n+1):
@@ -173,7 +176,7 @@ def setZCB(srl,p=100,qu=0.5,n=-1):
     :param p: strike price
     :param qu: up move probability
     :param n: expiration time
-    :returns : the zero coupon bond lattice
+    :returns: the zero coupon bond lattice
     '''
     if n == -1:
         n = srl.n
@@ -200,7 +203,7 @@ def setCouponBond(srl,p=100,c=0.1,qu=0.5,n=-1):
     :param c: coupon rate
     :param qu: up move probability
     :param n: expiration time
-    :returns : the coupon-bearing bond lattice
+    :returns: the coupon-bearing bond lattice
     '''
     if n == -1:
         n = srl.n
@@ -417,7 +420,10 @@ def elementarySecurity(srl,qu=0.5):
         # j=i case
         bt.setNode(i,i,0.5*(bt.getNode(i-1,i-1)/(1+srl.getNode(i-1,i-1))))
     return bt
-     
+
+
+
+
 if __name__=="__main__":
     import os
     a = setShortRateLattice(0.06,1.25,0.9,6)
