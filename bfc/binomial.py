@@ -1,4 +1,6 @@
 '''
+.. module:: bfc.binomial
+
 Option pricing
 ---------------------
 
@@ -80,6 +82,7 @@ class Binomial:
     
     def setStockPrice(self,t):
         ''' return stock price at time t
+        
         :param t: time step t
         '''
         return np.array([(self.u)**i*(self.d)**(t-i)\
@@ -131,6 +134,7 @@ class Binomial:
 
     def setFromBS(self,T,r,n,c,sigma,p,s,ae,cp):
         ''' set parameters by Black Scholes Model
+        
         '''
         self.R = exp(r*T/n)
         self.c = self.R-exp((r-c)*T/n)
@@ -142,6 +146,7 @@ class Binomial:
         self.type=[ae,cp]
         self.checkArbitrage()
         self.setRNP()
+        
 '''    os.system("dot -Tps "+filename+".dot -o temp.ps")
     os.system("ps2pdf temp.ps")
     os.system("mv temp.pdf "+filename+".pdf")
@@ -149,7 +154,9 @@ class Binomial:
 
 
 '''
-===========================
+
+Security pricing related
+------------------------
 '''
 
 import bfc.BinomialTree as BT
